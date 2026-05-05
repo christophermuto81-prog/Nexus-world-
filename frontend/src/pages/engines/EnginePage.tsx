@@ -1,9 +1,11 @@
+import { useMemo } from 'react'
 import { useParams, Link } from 'react-router-dom'
 import { engines } from '../../data/engines'
 
 export default function EnginePage() {
   const { slug } = useParams<{ slug: string }>()
   const engine = engines.find(e => e.slug === slug)
+  const activeUsers = useMemo(() => Math.floor(Math.random() * 5000) + 500, [slug])
 
   if (!engine) {
     return (
@@ -136,7 +138,7 @@ export default function EnginePage() {
           </div>
           <div className="bg-nexus-surface rounded-lg p-3 border border-nexus-border/50 text-center">
             <p className="text-xs text-nexus-muted mb-1">Active Users</p>
-            <p className="text-sm font-display font-bold text-nexus-purple">{(Math.floor(Math.random() * 5000) + 500).toLocaleString()}</p>
+            <p className="text-sm font-display font-bold text-nexus-purple">{activeUsers.toLocaleString()}</p>
           </div>
           <div className="bg-nexus-surface rounded-lg p-3 border border-nexus-border/50 text-center">
             <p className="text-xs text-nexus-muted mb-1">God Core Link</p>

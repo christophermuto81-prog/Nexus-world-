@@ -39,14 +39,14 @@ export default function Wallet() {
       {/* Actions */}
       <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
         {[
-          { icon: '📥', label: 'Deposit', color: 'nexus-green' },
-          { icon: '📤', label: 'Withdraw', color: 'nexus-orange' },
-          { icon: '🔄', label: 'Swap', color: 'nexus-cyan' },
-          { icon: '📊', label: 'Stake', color: 'nexus-purple' },
+          { icon: '📥', label: 'Deposit', hoverClass: 'hover:border-nexus-green/30' },
+          { icon: '📤', label: 'Withdraw', hoverClass: 'hover:border-nexus-orange/30' },
+          { icon: '🔄', label: 'Swap', hoverClass: 'hover:border-nexus-cyan/30' },
+          { icon: '📊', label: 'Stake', hoverClass: 'hover:border-nexus-purple/30' },
         ].map((action) => (
           <button
             key={action.label}
-            className={`bg-nexus-card border border-nexus-border rounded-xl p-4 text-center hover:border-${action.color}/30 transition-all`}
+            className={`bg-nexus-card border border-nexus-border rounded-xl p-4 text-center ${action.hoverClass} transition-all`}
           >
             <span className="text-2xl">{action.icon}</span>
             <p className="text-sm font-display font-bold text-white mt-2">{action.label}</p>

@@ -1,11 +1,13 @@
+import { useState } from 'react'
+
 export default function GodCore() {
-  const filters = Array.from({ length: 53 }, (_, i) => ({
+  const [filters] = useState(() => Array.from({ length: 53 }, (_, i) => ({
     id: i + 1,
     name: `Filter ${(i + 1).toString().padStart(2, '0')}`,
     category: ['Technical', 'Sentiment', 'Macro', 'Quantum', 'Pattern'][i % 5],
     accuracy: Math.round(75 + Math.random() * 20),
     status: Math.random() > 0.05 ? 'active' : 'calibrating',
-  }))
+  })))
 
   return (
     <div className="p-4 md:p-6 space-y-6 max-w-[1400px] mx-auto">
