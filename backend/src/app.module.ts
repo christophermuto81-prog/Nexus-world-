@@ -12,6 +12,11 @@ import { BrokersModule } from './modules/brokers/brokers.module';
 import { PaymentsModule } from './modules/payments/payments.module';
 import { WebsocketModule } from './modules/websocket/websocket.module';
 import { PrismaModule } from './modules/prisma/prisma.module';
+import { InstrumentsModule } from './modules/instruments/instruments.module';
+import { CompetitionsModule } from './modules/competitions/competitions.module';
+import { PartnershipsModule } from './modules/partnerships/partnerships.module';
+import { DirectorSalaryModule } from './modules/director-salary/director-salary.module';
+import { AffiliateSettlementModule } from './modules/affiliate-settlement/affiliate-settlement.module';
 
 @Module({
   imports: [
@@ -28,6 +33,11 @@ import { PrismaModule } from './modules/prisma/prisma.module';
     BrokersModule,
     PaymentsModule,
     WebsocketModule,
+    InstrumentsModule,
+    CompetitionsModule,
+    PartnershipsModule,
+    DirectorSalaryModule,
+    AffiliateSettlementModule,
   ],
 })
 export class AppModule {}

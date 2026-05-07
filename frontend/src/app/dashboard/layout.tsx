@@ -5,7 +5,8 @@ import Link from 'next/link';
 import { usePathname } from 'next/navigation';
 import {
   BarChart3, Bot, Home, LineChart, Wallet, Users, Globe,
-  Share2, Building2, Settings, LogOut, Zap, TrendingUp
+  Share2, Building2, Settings, LogOut, Zap, TrendingUp,
+  Trophy, HandMetal, DollarSign, Layers
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { useAuthStore } from '@/store/auth-store';
@@ -21,6 +22,9 @@ const sidebarLinks = [
   { href: '/brokers', label: 'Brokers', icon: Building2 },
   { href: '/affiliate', label: 'Affiliate', icon: Share2 },
   { href: '/community', label: 'Community', icon: Globe },
+  { href: '/instruments', label: 'Instruments', icon: Layers },
+  { href: '/competitions', label: 'Competitions', icon: Trophy },
+  { href: '/partnerships', label: 'Partnership', icon: HandMetal },
 ];
 
 export default function DashboardLayout({ children }: { children: React.ReactNode }) {

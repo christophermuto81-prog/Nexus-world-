@@ -41,6 +41,10 @@ model User {
   referrals       AffiliateReferral[] @relation("Referrer")
   watchlistItems  WatchlistItem[]
   brokerConnections BrokerConnection[]
+  instrumentsSubs   UserInstrumentsSub[]
+  competitionEntries CompetitionEntry[]
+  partnerships      Partnership[]
+  affiliateSettlements AffiliateSettlement[]
 }
 
 // ─── Subscriptions ───────────────────────────────────────────
@@ -207,8 +211,9 @@ model AffiliateCode {
   userId String @unique
   code   String @unique
 
-  user      User              @relation(fields: [userId], references: [id])
-  referrals AffiliateReferral[]
+  user        User              @relation(fields: [userId], references: [id])
+  referrals   AffiliateReferral[]
+  settlements AffiliateSettlement[]
 }
 
 model AffiliateReferral {
@@ -275,4 +280,145 @@ model Payment {
   status      String   @default("PENDING") // PENDING, COMPLETED, FAILED
   metadata    Json?
   createdAt   DateTime @default(now())
+}
+
+// ─── Global Instruments Subscription (FCS API) ───────────────
+enum InstrumentsTierName {
+  INSTRUMENTS_FREE
+  INSTRUMENTS_STARTER
+  INSTRUMENTS_STANDARD
+  INSTRUMENTS_PRO
+  INSTRUMENTS_ULTRA
+}
+
+model InstrumentsTier {
+  id            String              @id @default(uuid())
+  name          InstrumentsTierName @unique
+  displayName   String
+  price         Float
+  symbolLimit   Int
+  realTime      Boolean             @default(false)
+  level2Data    Boolean             @default(false)
+  description   String?
+  features      String[]
+  createdAt     DateTime            @default(now())
+
+  userInstrumentsSubs UserInstrumentsSub[]
+}
+
+model UserInstrumentsSub {
+  id        String   @id @default(uuid())
+  userId    String
+  tierId    String
+  active    Boolean  @default(true)
+  startDate DateTime @default(now())
+  endDate   DateTime?
+  paymentId String?
+  createdAt DateTime @default(now())
+
+  user User             @relation(fields: [userId], references: [id])
+  tier InstrumentsTier  @relation(fields: [tierId], references: [id])
+}
+
+// ─── Competition Arena ───────────────────────────────────────
+enum CompetitionFrequency {
+  COMP_HOURLY
+  COMP_DAILY
+  COMP_WEEKLY
+  COMP_MONTHLY
+}
+
+enum CompetitionMode {
+  BROKER
+  ARENA
+}
+
+model Competition {
+  id          String               @id @default(uuid())
+  name        String
+  frequency   CompetitionFrequency
+  mode        CompetitionMode      @default(ARENA)
+  entryFee    Float                @default(0)
+  prizePool   Float                @default(0)
+  prizeSplit  Float                @default(70)
+  manualOnly  Boolean              @default(false)
+  status      String               @default("OPEN")
+  startsAt    DateTime
+  endsAt      DateTime
+  createdAt   DateTime             @default(now())
+
+  entries     CompetitionEntry[]
+}
+
+model CompetitionEntry {
+  id              String   @id @default(uuid())
+  competitionId   String
+  userId          String
+  startingBalance Float    @default(10000)
+  currentBalance  Float    @default(10000)
+  pnl             Float    @default(0)
+  rank            Int?
+  settled         Boolean  @default(false)
+  prizeAmount     Float    @default(0)
+  joinedAt        DateTime @default(now())
+
+  competition Competition @relation(fields: [competitionId], references: [id])
+  user        User        @relation(fields: [userId], references: [id])
+
+  @@unique([competitionId, userId])
+}
+
+// ─── Partnership Form ────────────────────────────────────────
+enum PartnershipStatus {
+  PARTNERSHIP_PENDING
+  PARTNERSHIP_ACTIVE
+  PARTNERSHIP_SUSPENDED
+  PARTNERSHIP_TERMINATED
+}
+
+model Partnership {
+  id                  String            @id @default(uuid())
+  userId              String
+  entryFee            Float             @default(1)
+  capitalDeposit      Float             @default(10)
+  profitSplitUser     Float             @default(50)
+  profitSplitPlatform Float             @default(50)
+  currentTier         String            @default("BRONZE")
+  totalProfit         Float             @default(0)
+  totalPayout         Float             @default(0)
+  status              PartnershipStatus @default(PARTNERSHIP_PENDING)
+  appliedAt           DateTime          @default(now())
+  activatedAt         DateTime?
+  updatedAt           DateTime          @updatedAt
+
+  user User @relation(fields: [userId], references: [id])
+}
+
+// ─── Director's Salary System ────────────────────────────────
+model DirectorSalary {
+  id              String   @id @default(uuid())
+  month           String   @unique
+  grossSalary     Float    @default(10000)
+  personalDraw    Float    @default(2500)
+  reinvested      Float    @default(7500)
+  platformRevenue Float    @default(0)
+  status          String   @default("PENDING")
+  paidAt          DateTime?
+  createdAt       DateTime @default(now())
+}
+
+// ─── Affiliate Settlement (LX Token) ─────────────────────────
+model AffiliateSettlement {
+  id              String   @id @default(uuid())
+  userId          String
+  affiliateCodeId String
+  amount          Float
+  lxTokenAmount   Float
+  txSignature     String?
+  status          String   @default("PENDING")
+  settledAt       DateTime?
+  createdAt       DateTime @default(now())
+
+  user          User          @relation(fields: [userId], references: [id])
+  affiliateCode AffiliateCode @relation(fields: [affiliateCodeId], references: [id])
 }

@@ -167,6 +167,41 @@ async function main() {
     console.log('  ✓ Admin user created');
   }
 
+  // ─── Instruments Tiers (FCS API) ────────────────────────
+  const instrumentsTiers = [
+    { name: 'INSTRUMENTS_FREE' as const, displayName: 'Free', price: 0, symbolLimit: 50, realTime: false, level2Data: false, description: 'Delayed data for 50 symbols', features: ['50 symbols', 'Delayed data', 'Basic charts'] },
+    { name: 'INSTRUMENTS_STARTER' as const, displayName: 'Starter', price: 0.99, symbolLimit: 5000, realTime: true, level2Data: false, description: 'Real-time data for 5K symbols', features: ['5,000 symbols', 'Real-time data', 'Advanced charts', 'Alerts'] },
+    { name: 'INSTRUMENTS_STANDARD' as const, displayName: 'Standard', price: 4.99, symbolLimit: 50000, realTime: true, level2Data: false, description: 'Real-time data for 50K symbols', features: ['50,000 symbols', 'Real-time data', 'Technical indicators', 'Custom watchlists'] },
+    { name: 'INSTRUMENTS_PRO' as const, displayName: 'Pro', price: 49, symbolLimit: 125000, realTime: true, level2Data: false, description: 'Real-time data for 125K+ symbols', features: ['125,000+ symbols', 'Real-time data', 'API access', 'Priority support'] },
+    { name: 'INSTRUMENTS_ULTRA' as const, displayName: 'Ultra', price: 149, symbolLimit: 999999, realTime: true, level2Data: true, description: 'Unlimited + Level 2 data', features: ['Unlimited symbols', 'Level 2 data', 'Full API access', 'Dedicated support', 'Custom feeds'] },
+  ];
+
+  for (const tier of instrumentsTiers) {
+    await prisma.instrumentsTier.upsert({
+      where: { name: tier.name },
+      update: tier,
+      create: tier,
+    });
+  }
+  console.log('  ✓ Instruments tiers seeded');
+
+  // ─── Sample Competitions ──────────────────────────────────
+  const now = new Date();
+  const competitions = [
+    { name: 'Daily Trading Challenge', frequency: 'COMP_DAILY' as const, mode: 'ARENA' as const, entryFee: 5, prizePool: 500, prizeSplit: 70, manualOnly: false, status: 'OPEN', startsAt: now, endsAt: new Date(now.getTime() + 24 * 60 * 60 * 1000) },
+    { name: 'Weekly Championship', frequency: 'COMP_WEEKLY' as const, mode: 'ARENA' as const, entryFee: 25, prizePool: 2500, prizeSplit: 70, manualOnly: true, status: 'OPEN', startsAt: now, endsAt: new Date(now.getTime() + 7 * 24 * 60 * 60 * 1000) },
+    { name: 'Monthly Grand Prix', frequency: 'COMP_MONTHLY' as const, mode: 'BROKER' as const, entryFee: 100, prizePool: 10000, prizeSplit: 70, manualOnly: false, status: 'OPEN', startsAt: now, endsAt: new Date(now.getTime() + 30 * 24 * 60 * 60 * 1000) },
+    { name: 'Hourly Sprint', frequency: 'COMP_HOURLY' as const, mode: 'ARENA' as const, entryFee: 1, prizePool: 100, prizeSplit: 70, manualOnly: false, status: 'OPEN', startsAt: now, endsAt: new Date(now.getTime() + 60 * 60 * 1000) },
+  ];
+
+  for (const comp of competitions) {
+    const existing = await prisma.competition.findFirst({ where: { name: comp.name } });
+    if (!existing) {
+      await prisma.competition.create({ data: comp });
+    }
+  }
+  console.log('  ✓ Sample competitions seeded');
+
   console.log('Database seeding complete!');
 }
 

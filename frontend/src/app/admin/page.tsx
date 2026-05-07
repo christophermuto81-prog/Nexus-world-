@@ -40,7 +40,7 @@ export default function AdminPage() {
     );
   }
 
-  const tabs = ['overview', 'users', 'revenue', 'signals', 'settings'];
+  const tabs = ['overview', 'users', 'revenue', 'signals', 'modules', 'settings'];
 
   return (
     <div className="min-h-screen bg-latrux-darker">
@@ -147,6 +147,49 @@ export default function AdminPage() {
           </Card>
         )}
 
+        {tab === 'modules' && (
+          <div className="space-y-4">
+            <div className="grid md:grid-cols-2 gap-4">
+              <Card>
+                <CardContent className="p-6">
+                  <h3 className="font-bold mb-2">Director&apos;s Salary</h3>
+                  <p className="text-sm text-muted-foreground mb-3">$10,000/month — 25% draw, 75% reinvested</p>
+                  <Link href="/admin/salary">
+                    <Button variant="gold" className="w-full">Manage Salary</Button>
+                  </Link>
+                </CardContent>
+              </Card>
+              <Card>
+                <CardContent className="p-6">
+                  <h3 className="font-bold mb-2">Competition Arena</h3>
+                  <p className="text-sm text-muted-foreground mb-3">Manage contests, settle prizes (70/30 split)</p>
+                  <Link href="/competitions">
+                    <Button variant="outline" className="w-full">View Competitions</Button>
+                  </Link>
+                </CardContent>
+              </Card>
+              <Card>
+                <CardContent className="p-6">
+                  <h3 className="font-bold mb-2">Partnerships</h3>
+                  <p className="text-sm text-muted-foreground mb-3">Review partner applications, profit-split tiers</p>
+                  <Link href="/partnerships">
+                    <Button variant="outline" className="w-full">View Partnerships</Button>
+                  </Link>
+                </CardContent>
+              </Card>
+              <Card>
+                <CardContent className="p-6">
+                  <h3 className="font-bold mb-2">Affiliate Settlements</h3>
+                  <p className="text-sm text-muted-foreground mb-3">Process pending LX token payouts</p>
+                  <Link href="/affiliate">
+                    <Button variant="outline" className="w-full">View Affiliates</Button>
+                  </Link>
+                </CardContent>
+              </Card>
+            </div>
+          </div>
+        )}
+
         {tab === 'settings' && (
           <Card>
             <CardHeader>
@@ -164,8 +207,8 @@ export default function AdminPage() {
                 <Badge variant="success">Active — Rule-Based (Phase 1)</Badge>
               </div>
               <div className="p-4 rounded-lg bg-secondary/50">
-                <p className="text-sm font-medium mb-2">Competition Toggles</p>
-                <p className="text-xs text-muted-foreground">Coming in Phase 2</p>
+                <p className="text-sm font-medium mb-2">Competition Arena</p>
+                <Badge variant="success">Active — Phase 2</Badge>
               </div>
             </CardContent>
           </Card>
