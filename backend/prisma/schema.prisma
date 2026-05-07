@@ -1,0 +1,278 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+// ─── Users & Auth ────────────────────────────────────────────
+enum Role {
+  USER
+  ADMIN
+  PARTNER
+}
+
+enum KycStatus {
+  PENDING
+  APPROVED
+  REJECTED
+}
+
+model User {
+  id            String   @id @default(uuid())
+  email         String   @unique
+  passwordHash  String
+  name          String?
+  role          Role     @default(USER)
+  kycStatus     KycStatus @default(PENDING)
+  solanaAddress  String?
+  solanaPrivKey  String?  // encrypted, devnet only
+  lxTokenAccount String?
+  createdAt     DateTime @default(now())
+  updatedAt     DateTime @updatedAt
+
+  subscriptions   UserSubscription[]
+  signalPasses    UserSignalPass[]
+  trades          Trade[]
+  affiliateCode   AffiliateCode?
+  referredBy      AffiliateReferral? @relation("ReferredUser")
+  referrals       AffiliateReferral[] @relation("Referrer")
+  watchlistItems  WatchlistItem[]
+  brokerConnections BrokerConnection[]
+}
+
+// ─── Subscriptions ───────────────────────────────────────────
+enum SubscriptionTierName {
+  LIGHT
+  VISION
+  AI_TRADER
+  ELITE
+  HEDGE_FUND
+  ULTRA
+  INSTITUTIONAL
+}
+
+model SubscriptionTier {
+  id          String   @id @default(uuid())
+  name        SubscriptionTierName @unique
+  price       Float
+  signalsPerDay Int
+  indicators  Int
+  autoExecution Boolean @default(false)
+  description String?
+  features    String[] // list of feature keys
+  createdAt   DateTime @default(now())
+
+  userSubscriptions UserSubscription[]
+}
+
+model UserSubscription {
+  id        String   @id @default(uuid())
+  userId    String
+  tierId    String
+  active    Boolean  @default(true)
+  startDate DateTime @default(now())
+  endDate   DateTime?
+  paymentId String?
+  createdAt DateTime @default(now())
+
+  user User             @relation(fields: [userId], references: [id])
+  tier SubscriptionTier @relation(fields: [tierId], references: [id])
+}
+
+// ─── Signal Passes ───────────────────────────────────────────
+enum SignalType {
+  BINARY
+  SCALPING
+  SWING
+}
+
+enum PassDuration {
+  HOURLY
+  DAILY
+  WEEKLY
+  MONTHLY
+}
+
+model SignalPass {
+  id       String       @id @default(uuid())
+  type     SignalType
+  duration PassDuration
+  price    Float
+  active   Boolean      @default(true)
+
+  userPasses UserSignalPass[]
+}
+
+model UserSignalPass {
+  id        String   @id @default(uuid())
+  userId    String
+  passId    String
+  active    Boolean  @default(true)
+  startDate DateTime @default(now())
+  endDate   DateTime
+  paymentId String?
+
+  user User       @relation(fields: [userId], references: [id])
+  pass SignalPass  @relation(fields: [passId], references: [id])
+}
+
+// ─── Asset Classes & Instruments ─────────────────────────────
+model AssetClass {
+  id   String @id @default(uuid())
+  name String @unique // Forex, Crypto, Stocks, Commodities, Indices
+  instruments Instrument[]
+}
+
+model Instrument {
+  id           String @id @default(uuid())
+  symbol       String @unique
+  name         String
+  assetClassId String
+
+  assetClass AssetClass @relation(fields: [assetClassId], references: [id])
+  signals    Signal[]
+  watchlistItems WatchlistItem[]
+}
+
+// ─── Signals ─────────────────────────────────────────────────
+enum SignalDirection {
+  BUY
+  SELL
+}
+
+model Signal {
+  id           String          @id @default(uuid())
+  instrumentId String
+  type         SignalType
+  direction    SignalDirection
+  entryPrice   Float
+  stopLoss     Float
+  takeProfit   Float
+  confidence   Float           // 0-100
+  timeframe    String          // e.g. "5m", "1h", "4h"
+  status       String          @default("ACTIVE") // ACTIVE, HIT_TP, HIT_SL, EXPIRED
+  createdAt    DateTime        @default(now())
+  expiresAt    DateTime?
+
+  instrument Instrument @relation(fields: [instrumentId], references: [id])
+  trades     Trade[]
+}
+
+// ─── Trades (Paper Trading) ──────────────────────────────────
+enum TradeStatus {
+  OPEN
+  CLOSED
+  CANCELLED
+}
+
+model Trade {
+  id          String      @id @default(uuid())
+  userId      String
+  signalId    String?
+  instrument  String
+  direction   SignalDirection
+  entryPrice  Float
+  exitPrice   Float?
+  quantity    Float
+  stopLoss    Float?
+  takeProfit  Float?
+  pnl         Float?
+  status      TradeStatus @default(OPEN)
+  openedAt    DateTime    @default(now())
+  closedAt    DateTime?
+
+  user   User    @relation(fields: [userId], references: [id])
+  signal Signal? @relation(fields: [signalId], references: [id])
+}
+
+// ─── Watchlist ───────────────────────────────────────────────
+model WatchlistItem {
+  id           String @id @default(uuid())
+  userId       String
+  instrumentId String
+  addedAt      DateTime @default(now())
+
+  user       User       @relation(fields: [userId], references: [id])
+  instrument Instrument @relation(fields: [instrumentId], references: [id])
+
+  @@unique([userId, instrumentId])
+}
+
+// ─── Affiliate System ────────────────────────────────────────
+model AffiliateCode {
+  id     String @id @default(uuid())
+  userId String @unique
+  code   String @unique
+
+  user      User              @relation(fields: [userId], references: [id])
+  referrals AffiliateReferral[]
+}
+
+model AffiliateReferral {
+  id             String   @id @default(uuid())
+  referrerId     String
+  referredUserId String   @unique
+  commission     Float    @default(0)
+  lifetimeEarnings Float  @default(0)
+  bonusPaid      Boolean  @default(false)
+  createdAt      DateTime @default(now())
+
+  referrer     User          @relation("Referrer", fields: [referrerId], references: [id])
+  referredUser User          @relation("ReferredUser", fields: [referredUserId], references: [id])
+  affiliateCode AffiliateCode? @relation(fields: [affiliateCodeId], references: [id])
+  affiliateCodeId String?
+}
+
+// ─── Broker Directory ────────────────────────────────────────
+model Broker {
+  id          String @id @default(uuid())
+  name        String
+  logo        String?
+  website     String
+  apiSupport  Boolean @default(false)
+  assetTypes  String[] // ["forex", "crypto", "stocks"]
+  description String?
+  rating      Float?   @default(0)
+  createdAt   DateTime @default(now())
+
+  connections BrokerConnection[]
+}
+
+model BrokerConnection {
+  id        String   @id @default(uuid())
+  userId    String
+  brokerId  String
+  apiKey    String   // encrypted
+  apiSecret String   // encrypted
+  status    String   @default("PENDING") // PENDING, CONNECTED, FAILED
+  createdAt DateTime @default(now())
+
+  user   User   @relation(fields: [userId], references: [id])
+  broker Broker @relation(fields: [brokerId], references: [id])
+}
+
+// ─── Community Pulse ─────────────────────────────────────────
+model CommunityEvent {
+  id        String   @id @default(uuid())
+  type      String   // "JOIN", "TRADE", "SIGNAL", "MILESTONE"
+  message   String
+  location  String?  // lat,lng for globe
+  isGhost   Boolean  @default(false) // admin-seeded
+  createdAt DateTime @default(now())
+}
+
+// ─── Payments ────────────────────────────────────────────────
+model Payment {
+  id          String   @id @default(uuid())
+  userId      String
+  amount      Float
+  currency    String
+  provider    String   // "coinbase" | "flutterwave"
+  externalId  String?
+  status      String   @default("PENDING") // PENDING, COMPLETED, FAILED
+  metadata    Json?
+  createdAt   DateTime @default(now())
+}
