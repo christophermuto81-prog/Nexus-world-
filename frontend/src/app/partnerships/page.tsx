@@ -38,7 +38,8 @@ export default function PartnershipsPage() {
     fetch(`${API}/api/partnerships/me`, {
       headers: { Authorization: `Bearer ${token}` },
     })
-      .then((r) => r.json())
+      .then((r) => r.text())
+      .then((t) => t ? JSON.parse(t) : null)
       .then((data) => {
         setPartnership(data);
         setLoading(false);

@@ -39,7 +39,7 @@ export default function InstrumentsPage() {
       token
         ? fetch(`${API}/api/instruments/subscription`, {
             headers: { Authorization: `Bearer ${token}` },
-          }).then((r) => r.json())
+          }).then((r) => r.text()).then((t) => t ? JSON.parse(t) : null)
         : Promise.resolve(null),
     ]).then(([tiersData, subData]) => {
       setTiers(tiersData);
@@ -59,7 +59,7 @@ export default function InstrumentsPage() {
       });
       const sub = await fetch(`${API}/api/instruments/subscription`, {
         headers: { Authorization: `Bearer ${token}` },
-      }).then((r) => r.json());
+      }).then((r) => r.text()).then((t) => t ? JSON.parse(t) : null);
       setCurrentSub(sub);
     } finally {
       setSubscribing(null);
