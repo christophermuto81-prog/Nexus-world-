@@ -163,7 +163,7 @@ export default function AdminPage() {
                 <CardContent className="p-6">
                   <h3 className="font-bold mb-2">Competition Arena</h3>
                   <p className="text-sm text-muted-foreground mb-3">Manage contests, settle prizes (70/30 split)</p>
-                  <Link href="/competitions">
+                  <Link href="/dashboard/competitions">
                     <Button variant="outline" className="w-full">View Competitions</Button>
                   </Link>
                 </CardContent>
@@ -172,7 +172,7 @@ export default function AdminPage() {
                 <CardContent className="p-6">
                   <h3 className="font-bold mb-2">Partnerships</h3>
                   <p className="text-sm text-muted-foreground mb-3">Review partner applications, profit-split tiers</p>
-                  <Link href="/partnerships">
+                  <Link href="/dashboard/partnerships">
                     <Button variant="outline" className="w-full">View Partnerships</Button>
                   </Link>
                 </CardContent>

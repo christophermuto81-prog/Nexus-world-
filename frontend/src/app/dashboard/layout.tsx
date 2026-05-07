@@ -22,9 +22,9 @@ const sidebarLinks = [
   { href: '/brokers', label: 'Brokers', icon: Building2 },
   { href: '/affiliate', label: 'Affiliate', icon: Share2 },
   { href: '/community', label: 'Community', icon: Globe },
-  { href: '/instruments', label: 'Instruments', icon: Layers },
-  { href: '/competitions', label: 'Competitions', icon: Trophy },
-  { href: '/partnerships', label: 'Partnership', icon: HandMetal },
+  { href: '/dashboard/instruments', label: 'Instruments', icon: Layers },
+  { href: '/dashboard/competitions', label: 'Competitions', icon: Trophy },
+  { href: '/dashboard/partnerships', label: 'Partnership', icon: HandMetal },
 ];
 
 export default function DashboardLayout({ children }: { children: React.ReactNode }) {

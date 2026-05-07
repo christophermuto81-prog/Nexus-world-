@@ -43,12 +43,14 @@ export default function CompetitionsPage() {
   const [joining, setJoining] = useState<string | null>(null);
 
   useEffect(() => {
+    setLoading(true);
     fetch(`${API}/api/competitions?mode=${mode}`)
       .then((r) => r.json())
       .then((data) => {
-        setCompetitions(data);
-        setLoading(false);
-      });
+        setCompetitions(Array.isArray(data) ? data : []);
+      })
+      .catch(() => setCompetitions([]))
+      .finally(() => setLoading(false));
   }, [mode]);
 
   async function handleJoin(competitionId: string) {
