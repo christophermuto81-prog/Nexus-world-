@@ -1,4 +1,4 @@
-import { Injectable } from '@nestjs/common';
+import { Injectable, NotFoundException } from '@nestjs/common';
 import { PrismaService } from '../prisma/prisma.service';
 
 @Injectable()
@@ -15,11 +15,15 @@ export class AiBuilderService {
     });
   }
 
-  async updateStrategy(id: string, data: { filters?: any; backtestResult?: any; paperTradeResult?: any; validated?: boolean }) {
+  async updateStrategy(id: string, userId: string, data: { filters?: any; backtestResult?: any; paperTradeResult?: any }) {
+    const strategy = await this.prisma.aiBuilderStrategy.findFirst({ where: { id, userId } });
+    if (!strategy) throw new NotFoundException('Strategy not found');
     return this.prisma.aiBuilderStrategy.update({ where: { id }, data });
   }
 
-  async publishStrategy(id: string) {
+  async publishStrategy(id: string, userId: string) {
+    const strategy = await this.prisma.aiBuilderStrategy.findFirst({ where: { id, userId } });
+    if (!strategy) throw new NotFoundException('Strategy not found');
     return this.prisma.aiBuilderStrategy.update({ where: { id }, data: { published: true } });
   }
 

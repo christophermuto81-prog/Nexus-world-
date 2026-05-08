@@ -30,7 +30,7 @@ export class BrokerIntegrityService {
       _avg: { value: true },
     });
 
-    const newScore = Math.max(0, Math.min(100, 100 - (100 - (avg._avg.value || 100))));
+    const newScore = Math.max(0, Math.min(100, 100 - (avg._avg.value ?? 0)));
     await this.prisma.broker.update({ where: { id: brokerId }, data: { integrityScore: newScore } });
 
     return log;

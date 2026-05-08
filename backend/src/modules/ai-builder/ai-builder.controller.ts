@@ -40,14 +40,14 @@ export class AiBuilderController {
   @Put('update/:id')
   @UseGuards(JwtAuthGuard)
   @ApiBearerAuth()
-  update(@Param('id') id: string, @Body() body: any) {
-    return this.service.updateStrategy(id, body);
+  update(@Request() req: any, @Param('id') id: string, @Body() body: { filters?: any; backtestResult?: any; paperTradeResult?: any }) {
+    return this.service.updateStrategy(id, req.user.id, body);
   }
 
   @Post('publish/:id')
   @UseGuards(JwtAuthGuard)
   @ApiBearerAuth()
-  publish(@Param('id') id: string) {
-    return this.service.publishStrategy(id);
+  publish(@Request() req: any, @Param('id') id: string) {
+    return this.service.publishStrategy(id, req.user.id);
   }
 }

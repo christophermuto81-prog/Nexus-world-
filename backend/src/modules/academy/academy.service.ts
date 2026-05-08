@@ -30,7 +30,9 @@ export class AcademyService {
   }
 
   async updateProgress(userId: string, courseId: string, progress: number, quizScore?: number) {
-    const graduated = progress >= 100 && (quizScore ?? 0) >= 80;
+    const course = await this.prisma.academyCourse.findUnique({ where: { id: courseId } });
+    const passScore = course?.passScore ?? 80;
+    const graduated = progress >= 100 && (quizScore ?? 0) >= passScore;
     return this.prisma.academyEnrollment.update({
       where: { userId_courseId: { userId, courseId } },
       data: { progress, quizScore, graduated, graduatedAt: graduated ? new Date() : undefined, walletGrant: graduated ? 10 : 0 },
