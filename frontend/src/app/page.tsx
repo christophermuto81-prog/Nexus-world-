@@ -1,5 +1,5 @@
 import Link from 'next/link';
-import { ArrowRight, BarChart3, Bot, Shield, Zap, Globe, TrendingUp } from 'lucide-react';
+import { ArrowRight, BarChart3, Bot, Shield, Zap, Globe, TrendingUp, GraduationCap, Cpu, Heart } from 'lucide-react';
 
 export default function HomePage() {
   return (
@@ -14,6 +14,12 @@ export default function HomePage() {
             </span>
           </div>
           <div className="flex items-center gap-4">
+            <Link href="/academy" className="text-sm text-muted-foreground hover:text-foreground transition">
+              Academy
+            </Link>
+            <Link href="/ai-builder" className="text-sm text-muted-foreground hover:text-foreground transition">
+              AI Builder
+            </Link>
             <Link href="/community" className="text-sm text-muted-foreground hover:text-foreground transition">
               Community
             </Link>
@@ -152,16 +158,58 @@ export default function HomePage() {
         </div>
       </section>
 
+      {/* Live Counter & Chat */}
+      <section className="max-w-7xl mx-auto px-4 py-12 text-center">
+        <div className="inline-flex items-center gap-2 px-4 py-2 rounded-full bg-latrux-gold/10 border border-latrux-gold/20 text-latrux-gold text-sm">
+          <span className="w-2 h-2 rounded-full bg-latrux-green animate-pulse" />
+          <span>Traders online now</span>
+        </div>
+      </section>
+
+      {/* Quick Links */}
+      <section className="max-w-7xl mx-auto px-4 py-12">
+        <div className="grid md:grid-cols-4 gap-4 text-center">
+          <Link href="/academy" className="p-4 rounded-xl border border-border bg-card hover:border-latrux-gold/30 transition">
+            <GraduationCap className="h-8 w-8 text-latrux-gold mx-auto mb-2" />
+            <p className="text-sm font-semibold">Academy</p>
+          </Link>
+          <Link href="/ai-builder" className="p-4 rounded-xl border border-border bg-card hover:border-latrux-gold/30 transition">
+            <Cpu className="h-8 w-8 text-latrux-blue mx-auto mb-2" />
+            <p className="text-sm font-semibold">AI Builder</p>
+          </Link>
+          <Link href="/resilience" className="p-4 rounded-xl border border-border bg-card hover:border-latrux-gold/30 transition">
+            <Shield className="h-8 w-8 text-latrux-green mx-auto mb-2" />
+            <p className="text-sm font-semibold">Resilience</p>
+          </Link>
+          <Link href="/about" className="p-4 rounded-xl border border-border bg-card hover:border-latrux-gold/30 transition">
+            <Heart className="h-8 w-8 text-latrux-purple mx-auto mb-2" />
+            <p className="text-sm font-semibold">About</p>
+          </Link>
+        </div>
+      </section>
+
       {/* Footer */}
       <footer className="border-t border-border/40 py-12">
-        <div className="max-w-7xl mx-auto px-4 flex items-center justify-between">
-          <div className="flex items-center gap-2">
-            <Zap className="h-5 w-5 text-latrux-gold" />
-            <span className="font-semibold text-sm">LatruxTrade</span>
+        <div className="max-w-7xl mx-auto px-4">
+          <div className="flex items-center justify-between mb-6">
+            <div className="flex items-center gap-2">
+              <Zap className="h-5 w-5 text-latrux-gold" />
+              <span className="font-semibold text-sm">LatruxTrade</span>
+            </div>
+            <p className="text-xs text-muted-foreground">
+              Director: Tatenda Christopher Muto | Powered by Latrux AI
+            </p>
           </div>
-          <p className="text-xs text-muted-foreground">
-            Director: Tatenda Christopher Muto | Powered by Latrux AI
-          </p>
+          <div className="flex flex-wrap gap-4 text-xs text-muted-foreground">
+            <Link href="/about" className="hover:text-foreground transition">About</Link>
+            <Link href="/academy" className="hover:text-foreground transition">Academy</Link>
+            <Link href="/ai-builder" className="hover:text-foreground transition">AI Builder</Link>
+            <Link href="/resilience" className="hover:text-foreground transition">Resilience</Link>
+            <Link href="/verify" className="hover:text-foreground transition">Verify Message</Link>
+            <Link href="/affiliate" className="hover:text-foreground transition">Affiliate</Link>
+            <Link href="/community" className="hover:text-foreground transition">Community</Link>
+          </div>
+          <p className="text-xs text-muted-foreground mt-6 italic">&quot;We Are Time. Live the Future. Not Tomorrow. Now.&quot;</p>
         </div>
       </footer>
     </div>
