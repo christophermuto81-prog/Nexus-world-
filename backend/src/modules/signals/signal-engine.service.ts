@@ -3,7 +3,7 @@ import { PrismaService } from '../prisma/prisma.service';
 
 interface IndicatorData {
   rsi: number;
-  macd: { value: number; signal: number; histogram: number };
+  macd: { value: number; signals: number; histogram: number };
   sma: number;
   ema: number;
   bollingerBands: { upper: number; middle: number; lower: number };
@@ -13,7 +13,7 @@ interface IndicatorData {
 
 @Injectable()
 export class SignalsEngine {
-  private readonly logger = new Logger(SignalEngine.name);
+  private readonly logger = new Logger(SignalsEngine.name);
 
   constructor(private prisma: PrismaService) {}
 
@@ -64,7 +64,7 @@ export class SignalsEngine {
       });
 
       this.logger.log(`Signals generated: ${direction} at ${data.currentPrice} (score: ${score})`);
-      return signal;
+      return signals;
     }
 
     return null;
