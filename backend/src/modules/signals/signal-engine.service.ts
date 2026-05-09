@@ -12,16 +12,16 @@ interface IndicatorData {
 }
 
 @Injectable()
-export class SignalEngine {
+export class SignalsEngine {
   private readonly logger = new Logger(SignalEngine.name);
 
   constructor(private prisma: PrismaService) {}
 
   /**
-   * Rule-based signal generation using 5-indicator confluence.
+   * Rule-based signals generation using 5-indicator confluence.
    * >70 score → BUY, <30 → SELL
    */
-  async generateSignal(instrumentId: string, data: IndicatorData) {
+  async generateSignals(instrumentId: string, data: IndicatorData) {
     let score = 50; // neutral
 
     // RSI
@@ -49,7 +49,7 @@ export class SignalEngine {
       const slMultiplier = direction === 'BUY' ? 0.98 : 1.02;
       const tpMultiplier = direction === 'BUY' ? 1.03 : 0.97;
 
-      const signal = await this.prisma.signal.create({
+      const signals = await this.prisma.signals.create({
         data: {
           instrumentId,
           type: 'SCALPING',
@@ -63,7 +63,7 @@ export class SignalEngine {
         },
       });
 
-      this.logger.log(`Signal generated: ${direction} at ${data.currentPrice} (score: ${score})`);
+      this.logger.log(`Signals generated: ${direction} at ${data.currentPrice} (score: ${score})`);
       return signal;
     }
 
