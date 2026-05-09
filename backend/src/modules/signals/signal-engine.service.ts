@@ -29,8 +29,8 @@ export class SignalsEngine {
     else if (data.rsi > 70) score -= 15; // overbought → bearish
 
     // MACD
-    if (data.macd.histogram > 0 && data.macd.value > data.macd.signal) score += 15;
-    else if (data.macd.histogram < 0 && data.macd.value < data.macd.signal) score -= 15;
+    if (data.macd.histogram > 0 && data.macd.value > data.macd.signals) score += 15;
+    else if (data.macd.histogram < 0 && data.macd.value < data.macd.signals) score -= 15;
 
     // MA Crossover (EMA above SMA → bullish)
     if (data.ema > data.sma) score += 10;
