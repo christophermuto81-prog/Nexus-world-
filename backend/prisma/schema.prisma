@@ -1,0 +1,705 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+// ─── Users & Auth ────────────────────────────────────────────
+enum Role {
+  USER
+  ADMIN
+  PARTNER
+}
+
+enum KycStatus {
+  PENDING
+  APPROVED
+  REJECTED
+}
+
+enum VerificationLevel {
+  NONE
+  SOCIAL
+  BASIC
+  FULL
+  BIOMETRIC
+}
+
+model User {
+  id                String            @id @default(uuid())
+  email             String            @unique
+  passwordHash      String
+  name              String?
+  role              Role              @default(USER)
+  kycStatus         KycStatus         @default(PENDING)
+  verificationLevel VerificationLevel @default(NONE)
+  socialProvider    String?
+  socialId          String?
+  twoFactorEnabled  Boolean           @default(false)
+  twoFactorSecret   String?
+  solanaAddress     String?
+  solanaPrivKey     String?
+  lxTokenAccount    String?
+  withdrawalLocked  Boolean           @default(false)
+  lastLoginAt       DateTime?
+  lastLoginIp       String?
+  createdAt         DateTime          @default(now())
+  updatedAt         DateTime          @updatedAt
+
+  subscriptions        UserSubscription[]
+  signalPasses         UserSignalPass[]
+  trades               Trade[]
+  affiliateCode        AffiliateCode?
+  referredBy           AffiliateReferral?  @relation("ReferredUser")
+  referrals            AffiliateReferral[] @relation("Referrer")
+  watchlistItems       WatchlistItem[]
+  brokerConnections    BrokerConnection[]
+  instrumentsSubs      UserInstrumentsSub[]
+  competitionEntries   CompetitionEntry[]
+  partnerships         Partnership[]
+  affiliateSettlements AffiliateSettlement[]
+  chatMessages         ChatMessage[]
+  academyEnrollments   AcademyEnrollment[]
+  courseEnrollments     CourseEnrollment[]
+  aiBuilderStrategies  AiBuilderStrategy[]
+  suspiciousReports    SuspiciousReport[]
+  loginAlerts          LoginAlert[]
+}
+
+// ─── Subscriptions ───────────────────────────────────────────
+enum SubscriptionTierName {
+  LIGHT
+  VISION
+  AI_TRADER
+  ELITE
+  HEDGE_FUND
+  ULTRA
+  INSTITUTIONAL
+}
+
+model SubscriptionTier {
+  id            String               @id @default(uuid())
+  name          SubscriptionTierName @unique
+  price         Float
+  signalsPerDay Int
+  indicators    Int
+  autoExecution Boolean @default(false)
+  description   String?
+  features      String[]
+  createdAt     DateTime @default(now())
+
+  userSubscriptions UserSubscription[]
+}
+
+model UserSubscription {
+  id        String   @id @default(uuid())
+  userId    String
+  tierId    String
+  active    Boolean  @default(true)
+  startDate DateTime @default(now())
+  endDate   DateTime?
+  paymentId String?
+  createdAt DateTime @default(now())
+
+  user User             @relation(fields: [userId], references: [id])
+  tier SubscriptionTier @relation(fields: [tierId], references: [id])
+}
+
+// ─── Signal Passes ───────────────────────────────────────────
+enum SignalType {
+  BINARY
+  SCALPING
+  SWING
+}
+
+enum PassDuration {
+  HOURLY
+  DAILY
+  WEEKLY
+  MONTHLY
+}
+
+model SignalPass {
+  id       String       @id @default(uuid())
+  type     SignalType
+  duration PassDuration
+  price    Float
+  active   Boolean      @default(true)
+
+  userPasses UserSignalPass[]
+}
+
+model UserSignalPass {
+  id        String   @id @default(uuid())
+  userId    String
+  passId    String
+  active    Boolean  @default(true)
+  startDate DateTime @default(now())
+  endDate   DateTime
+  paymentId String?
+
+  user User       @relation(fields: [userId], references: [id])
+  pass SignalPass  @relation(fields: [passId], references: [id])
+}
+
+// ─── Asset Classes & Instruments ─────────────────────────────
+model AssetClass {
+  id   String @id @default(uuid())
+  name String @unique
+  instruments Instrument[]
+}
+
+model Instrument {
+  id           String @id @default(uuid())
+  symbol       String @unique
+  name         String
+  assetClassId String
+
+  assetClass AssetClass @relation(fields: [assetClassId], references: [id])
+  signals    Signal[]
+  watchlistItems WatchlistItem[]
+}
+
+// ─── Signals ─────────────────────────────────────────────────
+enum SignalDirection {
+  BUY
+  SELL
+}
+
+model Signal {
+  id           String          @id @default(uuid())
+  instrumentId String
+  type         SignalType
+  direction    SignalDirection
+  entryPrice   Float
+  stopLoss     Float
+  takeProfit   Float
+  confidence   Float
+  timeframe    String
+  status       String          @default("ACTIVE")
+  watermarkId  String?
+  createdAt    DateTime        @default(now())
+  expiresAt    DateTime?
+
+  instrument Instrument @relation(fields: [instrumentId], references: [id])
+  trades     Trade[]
+}
+
+// ─── Trades (Paper Trading) ──────────────────────────────────
+enum TradeStatus {
+  OPEN
+  CLOSED
+  CANCELLED
+}
+
+model Trade {
+  id          String      @id @default(uuid())
+  userId      String
+  signalId    String?
+  instrument  String
+  direction   SignalDirection
+  entryPrice  Float
+  exitPrice   Float?
+  quantity    Float
+  stopLoss    Float?
+  takeProfit  Float?
+  pnl         Float?
+  status      TradeStatus @default(OPEN)
+  openedAt    DateTime    @default(now())
+  closedAt    DateTime?
+
+  user   User    @relation(fields: [userId], references: [id])
+  signal Signal? @relation(fields: [signalId], references: [id])
+}
+
+// ─── Watchlist ───────────────────────────────────────────────
+model WatchlistItem {
+  id           String @id @default(uuid())
+  userId       String
+  instrumentId String
+  addedAt      DateTime @default(now())
+
+  user       User       @relation(fields: [userId], references: [id])
+  instrument Instrument @relation(fields: [instrumentId], references: [id])
+
+  @@unique([userId, instrumentId])
+}
+
+// ─── Affiliate System ────────────────────────────────────────
+model AffiliateCode {
+  id              String    @id @default(uuid())
+  userId          String    @unique
+  code            String    @unique
+  qualified       Boolean   @default(false)
+  qualifiedAt     DateTime?
+  codeOfConduct   Boolean   @default(false)
+  firstCommission Float     @default(50)
+  lifetimeRate    Float     @default(10)
+
+  user        User              @relation(fields: [userId], references: [id])
+  referrals   AffiliateReferral[]
+  settlements AffiliateSettlement[]
+}
+
+model AffiliateReferral {
+  id             String   @id @default(uuid())
+  referrerId     String
+  referredUserId String   @unique
+  commission     Float    @default(0)
+  lifetimeEarnings Float  @default(0)
+  bonusPaid      Boolean  @default(false)
+  createdAt      DateTime @default(now())
+
+  referrer     User          @relation("Referrer", fields: [referrerId], references: [id])
+  referredUser User          @relation("ReferredUser", fields: [referredUserId], references: [id])
+  affiliateCode AffiliateCode? @relation(fields: [affiliateCodeId], references: [id])
+  affiliateCodeId String?
+}
+
+// ─── Broker Directory ────────────────────────────────────────
+model Broker {
+  id             String   @id @default(uuid())
+  name           String
+  logo           String?
+  website        String
+  apiSupport     Boolean  @default(false)
+  assetTypes     String[]
+  description    String?
+  rating         Float?   @default(0)
+  integrityScore Float    @default(100)
+  status         String   @default("ACTIVE")
+  createdAt      DateTime @default(now())
+
+  connections   BrokerConnection[]
+  integrityLogs BrokerIntegrityLog[]
+}
+
+model BrokerConnection {
+  id        String   @id @default(uuid())
+  userId    String
+  brokerId  String
+  apiKey    String
+  apiSecret String
+  status    String   @default("PENDING")
+  createdAt DateTime @default(now())
+
+  user   User   @relation(fields: [userId], references: [id])
+  broker Broker @relation(fields: [brokerId], references: [id])
+}
+
+// ─── Broker Integrity Monitoring ─────────────────────────────
+model BrokerIntegrityLog {
+  id         String   @id @default(uuid())
+  brokerId   String
+  metric     String
+  value      Float
+  severity   String   @default("LOW")
+  action     String?
+  detectedAt DateTime @default(now())
+
+  broker Broker @relation(fields: [brokerId], references: [id])
+}
+
+// ─── Community Pulse ─────────────────────────────────────────
+model CommunityEvent {
+  id        String   @id @default(uuid())
+  type      String
+  message   String
+  location  String?
+  isGhost   Boolean  @default(false)
+  createdAt DateTime @default(now())
+}
+
+// ─── General Chat ────────────────────────────────────────────
+model ChatMessage {
+  id        String   @id @default(uuid())
+  userId    String
+  content   String
+  flagged   Boolean  @default(false)
+  createdAt DateTime @default(now())
+
+  user User @relation(fields: [userId], references: [id])
+}
+
+// ─── Payments ────────────────────────────────────────────────
+model Payment {
+  id          String   @id @default(uuid())
+  userId      String
+  amount      Float
+  currency    String
+  provider    String
+  externalId  String?
+  status      String   @default("PENDING")
+  metadata    Json?
+  createdAt   DateTime @default(now())
+}
+
+// ─── Donation Fund ───────────────────────────────────────────
+model DonationFund {
+  id               String   @id @default(uuid())
+  date             String   @unique
+  platformEarnings Float    @default(0)
+  donationAmount   Float    @default(0)
+  recipientCause   String?
+  txSignature      String?
+  status           String   @default("PENDING")
+  createdAt        DateTime @default(now())
+}
+
+// ─── Treasury (70/30 Financial Rules) ────────────────────────
+model TreasuryRecord {
+  id            String   @id @default(uuid())
+  date          String   @unique
+  dailyIncome   Float    @default(0)
+  tradingPool   Float    @default(0)
+  opsRetained   Float    @default(0)
+  donationAlloc Float    @default(0)
+  tradingProfit Float    @default(0)
+  poolBalance   Float    @default(0)
+  drawdownPct   Float    @default(0)
+  sharpeRatio   Float?
+  createdAt     DateTime @default(now())
+}
+
+// ─── Global Instruments Subscription (FCS API) ───────────────
+enum InstrumentsTierName {
+  INSTRUMENTS_FREE
+  INSTRUMENTS_STARTER
+  INSTRUMENTS_STANDARD
+  INSTRUMENTS_PRO
+  INSTRUMENTS_ULTRA
+}
+
+model InstrumentsTier {
+  id            String              @id @default(uuid())
+  name          InstrumentsTierName @unique
+  displayName   String
+  price         Float
+  symbolLimit   Int
+  realTime      Boolean             @default(false)
+  level2Data    Boolean             @default(false)
+  description   String?
+  features      String[]
+  createdAt     DateTime            @default(now())
+
+  userInstrumentsSubs UserInstrumentsSub[]
+}
+
+model UserInstrumentsSub {
+  id        String   @id @default(uuid())
+  userId    String
+  tierId    String
+  active    Boolean  @default(true)
+  startDate DateTime @default(now())
+  endDate   DateTime?
+  paymentId String?
+  createdAt DateTime @default(now())
+
+  user User             @relation(fields: [userId], references: [id])
+  tier InstrumentsTier  @relation(fields: [tierId], references: [id])
+}
+
+// ─── Competition Arena ───────────────────────────────────────
+enum CompetitionFrequency {
+  COMP_HOURLY
+  COMP_DAILY
+  COMP_WEEKLY
+  COMP_MONTHLY
+}
+
+enum CompetitionMode {
+  BROKER
+  ARENA
+}
+
+model Competition {
+  id          String               @id @default(uuid())
+  name        String
+  frequency   CompetitionFrequency
+  mode        CompetitionMode      @default(ARENA)
+  entryFee    Float                @default(0)
+  prizePool   Float                @default(0)
+  prizeSplit  Float                @default(70)
+  manualOnly  Boolean              @default(false)
+  status      String               @default("OPEN")
+  startsAt    DateTime
+  endsAt      DateTime
+  createdAt   DateTime             @default(now())
+
+  entries     CompetitionEntry[]
+}
+
+model CompetitionEntry {
+  id              String   @id @default(uuid())
+  competitionId   String
+  userId          String
+  startingBalance Float    @default(10000)
+  currentBalance  Float    @default(10000)
+  pnl             Float    @default(0)
+  rank            Int?
+  settled         Boolean  @default(false)
+  prizeAmount     Float    @default(0)
+  joinedAt        DateTime @default(now())
+
+  competition Competition @relation(fields: [competitionId], references: [id])
+  user        User        @relation(fields: [userId], references: [id])
+
+  @@unique([competitionId, userId])
+}
+
+// ─── Partnership Form ────────────────────────────────────────
+enum PartnershipStatus {
+  PARTNERSHIP_PENDING
+  PARTNERSHIP_ACTIVE
+  PARTNERSHIP_SUSPENDED
+  PARTNERSHIP_TERMINATED
+}
+
+model Partnership {
+  id                  String            @id @default(uuid())
+  userId              String
+  entryFee            Float             @default(1)
+  capitalDeposit      Float             @default(10)
+  profitSplitUser     Float             @default(50)
+  profitSplitPlatform Float             @default(50)
+  currentTier         String            @default("BRONZE")
+  totalProfit         Float             @default(0)
+  totalPayout         Float             @default(0)
+  status              PartnershipStatus @default(PARTNERSHIP_PENDING)
+  appliedAt           DateTime          @default(now())
+  activatedAt         DateTime?
+  updatedAt           DateTime          @updatedAt
+
+  user User @relation(fields: [userId], references: [id])
+}
+
+// ─── Director's Salary System ────────────────────────────────
+model DirectorSalary {
+  id              String   @id @default(uuid())
+  month           String   @unique
+  grossRevenue    Float    @default(0)
+  salaryAmount    Float    @default(0)
+  personalDraw    Float    @default(0)
+  reinvested      Float    @default(0)
+  platformRevenue Float    @default(0)
+  status          String   @default("PENDING")
+  paidAt          DateTime?
+  createdAt       DateTime @default(now())
+}
+
+// ─── Affiliate Settlement (LX Token) ─────────────────────────
+model AffiliateSettlement {
+  id              String   @id @default(uuid())
+  userId          String
+  affiliateCodeId String
+  amount          Float
+  lxTokenAmount   Float
+  txSignature     String?
+  status          String   @default("PENDING")
+  settledAt       DateTime?
+  createdAt       DateTime @default(now())
+
+  user          User          @relation(fields: [userId], references: [id])
+  affiliateCode AffiliateCode @relation(fields: [affiliateCodeId], references: [id])
+}
+
+// ─── LatruxTrade Academy ─────────────────────────────────────
+model AcademyCourse {
+  id           String   @id @default(uuid())
+  slug         String   @unique
+  title        String
+  description  String
+  price        Float
+  duration     String
+  isMainCourse Boolean  @default(false)
+  modules      Int      @default(1)
+  passScore    Float    @default(80)
+  nftCertId    String?
+  createdAt    DateTime @default(now())
+
+  enrollments AcademyEnrollment[]
+  lessons     AcademyLesson[]
+}
+
+model AcademyLesson {
+  id        String   @id @default(uuid())
+  courseId   String
+  week      Int      @default(1)
+  title     String
+  content   String
+  videoUrl  String?
+  quizData  Json?
+  sortOrder Int      @default(0)
+  createdAt DateTime @default(now())
+
+  course AcademyCourse @relation(fields: [courseId], references: [id])
+}
+
+model AcademyEnrollment {
+  id          String   @id @default(uuid())
+  userId      String
+  courseId     String
+  progress    Float    @default(0)
+  quizScore   Float?
+  graduated   Boolean  @default(false)
+  nftMinted   Boolean  @default(false)
+  walletGrant Float    @default(0)
+  enrolledAt  DateTime @default(now())
+  graduatedAt DateTime?
+
+  user   User          @relation(fields: [userId], references: [id])
+  course AcademyCourse @relation(fields: [courseId], references: [id])
+
+  @@unique([userId, courseId])
+}
+
+// ─── Professional Courses ────────────────────────────────────
+model ProfessionalCourse {
+  id          String   @id @default(uuid())
+  slug        String   @unique
+  title       String
+  description String
+  price       Float    @default(29)
+  bundlePrice Float    @default(149)
+  modules     Int      @default(8)
+  passScore   Float    @default(80)
+  createdAt   DateTime @default(now())
+
+  enrollments CourseEnrollment[]
+}
+
+model CourseEnrollment {
+  id          String   @id @default(uuid())
+  userId      String
+  courseId     String
+  progress    Float    @default(0)
+  quizScore   Float?
+  completed   Boolean  @default(false)
+  nftMinted   Boolean  @default(false)
+  enrolledAt  DateTime @default(now())
+  completedAt DateTime?
+
+  user   User               @relation(fields: [userId], references: [id])
+  course ProfessionalCourse @relation(fields: [courseId], references: [id])
+
+  @@unique([userId, courseId])
+}
+
+// ─── Static AI Builder ───────────────────────────────────────
+enum AiBuilderTier {
+  BUILDER_STARTER
+  BUILDER_PRO
+  BUILDER_ENTERPRISE
+}
+
+model AiBuilderStrategy {
+  id               String        @id @default(uuid())
+  userId           String
+  name             String
+  tier             AiBuilderTier @default(BUILDER_STARTER)
+  filters          Json
+  backtestResult   Json?
+  paperTradeResult Json?
+  gpuCredits       Int           @default(0)
+  published        Boolean       @default(false)
+  validated        Boolean       @default(false)
+  createdAt        DateTime      @default(now())
+  updatedAt        DateTime      @updatedAt
+
+  user User @relation(fields: [userId], references: [id])
+}
+
+// ─── Ghost Tracker & Anti-Scam ───────────────────────────────
+model GhostTrackerAlert {
+  id          String   @id @default(uuid())
+  type        String
+  severity    String   @default("MEDIUM")
+  source      String
+  details     String
+  threatScore Float    @default(0)
+  resolved    Boolean  @default(false)
+  detectedAt  DateTime @default(now())
+}
+
+model SuspiciousReport {
+  id          String   @id @default(uuid())
+  userId      String
+  type        String
+  description String
+  status      String   @default("PENDING")
+  createdAt   DateTime @default(now())
+
+  user User @relation(fields: [userId], references: [id])
+}
+
+model LoginAlert {
+  id         String   @id @default(uuid())
+  userId     String
+  ipAddress  String
+  userAgent  String?
+  location   String?
+  suspicious Boolean  @default(false)
+  createdAt  DateTime @default(now())
+
+  user User @relation(fields: [userId], references: [id])
+}
+
+// ─── Living Autonomous Core State ────────────────────────────
+model AiCoreState {
+  id                 String   @id @default(uuid())
+  confluenceScore    Float    @default(0)
+  regimeId           Int      @default(0)
+  regimeConfidence   Float    @default(0)
+  aggressionLevel    Int      @default(1)
+  activeFilters      Int      @default(54)
+  brokerIntegrityAvg Float    @default(100)
+  apexReConfidence   Float    @default(0)
+  failureCorrections Int      @default(0)
+  entropyCollapseIdx Float    @default(0)
+  partnerGatePassing Boolean  @default(true)
+  lockdownMode       Boolean  @default(false)
+  consecutiveLosses  Int      @default(0)
+  consecutiveWins    Int      @default(0)
+  selfEvolutionCycle Int      @default(0)
+  rollingSharpRatio  Float?
+  maxDrawdownPct     Float    @default(0)
+  updatedAt          DateTime @updatedAt
+}
+
+// ─── Failure Theory Engine ───────────────────────────────────
+model FailureLog {
+  id             String   @id @default(uuid())
+  source         String
+  failureType    String
+  correctionMode String
+  lessonLearned  String?
+  stage          String   @default("CAPTURE")
+  resolved       Boolean  @default(false)
+  timeToCorrect  Float?
+  createdAt      DateTime @default(now())
+}
+
+// ─── Apex Reverse Engineering Vectors ────────────────────────
+model ApexReVector {
+  id          String   @id @default(uuid())
+  vectorName  String
+  vectorIndex Int
+  confidence  Float    @default(0)
+  lastScan    DateTime @default(now())
+  findings    Json?
+  status      String   @default("ACTIVE")
+  createdAt   DateTime @default(now())
+}
+
+// ─── Kill Switches (Admin Godview) ───────────────────────────
+model KillSwitch {
+  id        String   @id @default(uuid())
+  name      String   @unique
+  enabled   Boolean  @default(true)
+  reason    String?
+  toggledBy String?
+  toggledAt DateTime @default(now())
+}
