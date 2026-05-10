@@ -3,7 +3,7 @@ import { PrismaService } from '../prisma/prisma.service';
 
 interface IndicatorData {
   rsi: number;
-  macd: { value: number; signal: number; histogram: number };
+  macd: { value: number; signals: number; histogram: number };
   sma: number;
   ema: number;
   bollingerBands: { upper: number; middle: number; lower: number };
@@ -12,16 +12,16 @@ interface IndicatorData {
 }
 
 @Injectable()
-export class SignalEngine {
-  private readonly logger = new Logger(SignalEngine.name);
+export class SignalsEngine {
+  private readonly logger = new Logger(SignalsEngine.name);
 
   constructor(private prisma: PrismaService) {}
 
   /**
-   * Rule-based signal generation using 5-indicator confluence.
+   * Rule-based signals generation using 5-indicator confluence.
    * >70 score → BUY, <30 → SELL
    */
-  async generateSignal(instrumentId: string, data: IndicatorData) {
+  async generateSignals(instrumentId: string, data: IndicatorData) {
     let score = 50; // neutral
 
     // RSI
@@ -29,8 +29,8 @@ export class SignalEngine {
     else if (data.rsi > 70) score -= 15; // overbought → bearish
 
     // MACD
-    if (data.macd.histogram > 0 && data.macd.value > data.macd.signal) score += 15;
-    else if (data.macd.histogram < 0 && data.macd.value < data.macd.signal) score -= 15;
+    if (data.macd.histogram > 0 && data.macd.value > data.macd.signals) score += 15;
+    else if (data.macd.histogram < 0 && data.macd.value < data.macd.signals) score -= 15;
 
     // MA Crossover (EMA above SMA → bullish)
     if (data.ema > data.sma) score += 10;
@@ -49,7 +49,7 @@ export class SignalEngine {
       const slMultiplier = direction === 'BUY' ? 0.98 : 1.02;
       const tpMultiplier = direction === 'BUY' ? 1.03 : 0.97;
 
-      const signal = await this.prisma.signal.create({
+      const signals = await this.prisma.signals.create({
         data: {
           instrumentId,
           type: 'SCALPING',
@@ -63,8 +63,8 @@ export class SignalEngine {
         },
       });
 
-      this.logger.log(`Signal generated: ${direction} at ${data.currentPrice} (score: ${score})`);
-      return signal;
+      this.logger.log(`Signals generated: ${direction} at ${data.currentPrice} (score: ${score})`);
+      return signals;
     }
 
     return null;

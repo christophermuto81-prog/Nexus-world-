@@ -40,13 +40,15 @@ const config: Config = {
           foreground: 'hsl(var(--card-foreground))',
         },
         latrux: {
-          gold: '#F59E0B',
+          gold: '#d4a853',
           blue: '#3B82F6',
-          green: '#10B981',
+          green: '#2ecc71',
           red: '#EF4444',
           purple: '#8B5CF6',
-          dark: '#0F172A',
-          darker: '#020617',
+          dark: '#0a0f1a',
+          darker: '#060b14',
+          navy: '#0a0f1a',
+          emerald: '#2ecc71',
         },
       },
       borderRadius: {
@@ -64,8 +66,8 @@ const config: Config = {
       },
       keyframes: {
         glow: {
-          '0%': { boxShadow: '0 0 5px rgba(245, 158, 11, 0.5)' },
-          '100%': { boxShadow: '0 0 20px rgba(245, 158, 11, 0.8)' },
+          '0%': { boxShadow: '0 0 5px rgba(212, 168, 83, 0.5)' },
+          '100%': { boxShadow: '0 0 20px rgba(212, 168, 83, 0.8)' },
         },
       },
     },

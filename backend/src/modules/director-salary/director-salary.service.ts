@@ -18,9 +18,10 @@ export class DirectorSalaryService {
       record = await this.prisma.directorSalary.create({
         data: {
           month,
-          grossSalary: 10000,
-          personalDraw: 2500,
-          reinvested: 7500,
+          grossRevenue: revenue,
+          salaryAmount: revenue * 0.25,
+          personalDraw: revenue * 0.25,
+          reinvested: revenue * 0.75,
           platformRevenue: revenue,
         },
       });
@@ -57,7 +58,7 @@ export class DirectorSalaryService {
 
   async getSummary() {
     const records = await this.prisma.directorSalary.findMany();
-    const totalGross = records.reduce((sum, r) => sum + r.grossSalary, 0);
+    const totalGross = records.reduce((sum, r) => sum + r.grossRevenue, 0);
     const totalDraw = records.reduce((sum, r) => sum + r.personalDraw, 0);
     const totalReinvested = records.reduce((sum, r) => sum + r.reinvested, 0);
     const totalRevenue = records.reduce((sum, r) => sum + r.platformRevenue, 0);

@@ -20,31 +20,53 @@ enum KycStatus {
   REJECTED
 }
 
-model User {
-  id            String   @id @default(uuid())
-  email         String   @unique
-  passwordHash  String
-  name          String?
-  role          Role     @default(USER)
-  kycStatus     KycStatus @default(PENDING)
-  solanaAddress  String?
-  solanaPrivKey  String?  // encrypted, devnet only
-  lxTokenAccount String?
-  createdAt     DateTime @default(now())
-  updatedAt     DateTime @updatedAt
+enum VerificationLevel {
+  NONE
+  SOCIAL
+  BASIC
+  FULL
+  BIOMETRIC
+}
 
-  subscriptions   UserSubscription[]
-  signalPasses    UserSignalPass[]
-  trades          Trade[]
-  affiliateCode   AffiliateCode?
-  referredBy      AffiliateReferral? @relation("ReferredUser")
-  referrals       AffiliateReferral[] @relation("Referrer")
-  watchlistItems  WatchlistItem[]
-  brokerConnections BrokerConnection[]
-  instrumentsSubs   UserInstrumentsSub[]
-  competitionEntries CompetitionEntry[]
-  partnerships      Partnership[]
+model User {
+  id                String            @id @default(uuid())
+  email             String            @unique
+  passwordHash      String
+  name              String?
+  role              Role              @default(USER)
+  kycStatus         KycStatus         @default(PENDING)
+  verificationLevel VerificationLevel @default(NONE)
+  socialProvider    String?
+  socialId          String?
+  twoFactorEnabled  Boolean           @default(false)
+  twoFactorSecret   String?
+  solanaAddress     String?
+  solanaPrivKey     String?
+  lxTokenAccount    String?
+  withdrawalLocked  Boolean           @default(false)
+  lastLoginAt       DateTime?
+  lastLoginIp       String?
+  createdAt         DateTime          @default(now())
+  updatedAt         DateTime          @updatedAt
+
+  subscriptions        UserSubscription[]
+  signalPasses         UserSignalPass[]
+  trades               Trade[]
+  affiliateCode        AffiliateCode?
+  referredBy           AffiliateReferral?  @relation("ReferredUser")
+  referrals            AffiliateReferral[] @relation("Referrer")
+  watchlistItems       WatchlistItem[]
+  brokerConnections    BrokerConnection[]
+  instrumentsSubs      UserInstrumentsSub[]
+  competitionEntries   CompetitionEntry[]
+  partnerships         Partnership[]
   affiliateSettlements AffiliateSettlement[]
+  chatMessages         ChatMessage[]
+  academyEnrollments   AcademyEnrollment[]
+  courseEnrollments     CourseEnrollment[]
+  aiBuilderStrategies  AiBuilderStrategy[]
+  suspiciousReports    SuspiciousReport[]
+  loginAlerts          LoginAlert[]
 }
 
 // ─── Subscriptions ───────────────────────────────────────────
@@ -59,15 +81,15 @@ enum SubscriptionTierName {
 }
 
 model SubscriptionTier {
-  id          String   @id @default(uuid())
-  name        SubscriptionTierName @unique
-  price       Float
+  id            String               @id @default(uuid())
+  name          SubscriptionTierName @unique
+  price         Float
   signalsPerDay Int
-  indicators  Int
+  indicators    Int
   autoExecution Boolean @default(false)
-  description String?
-  features    String[] // list of feature keys
-  createdAt   DateTime @default(now())
+  description   String?
+  features      String[]
+  createdAt     DateTime @default(now())
 
   userSubscriptions UserSubscription[]
 }
@@ -126,7 +148,7 @@ model UserSignalPass {
 // ─── Asset Classes & Instruments ─────────────────────────────
 model AssetClass {
   id   String @id @default(uuid())
-  name String @unique // Forex, Crypto, Stocks, Commodities, Indices
+  name String @unique
   instruments Instrument[]
 }
 
@@ -155,9 +177,10 @@ model Signal {
   entryPrice   Float
   stopLoss     Float
   takeProfit   Float
-  confidence   Float           // 0-100
-  timeframe    String          // e.g. "5m", "1h", "4h"
-  status       String          @default("ACTIVE") // ACTIVE, HIT_TP, HIT_SL, EXPIRED
+  confidence   Float
+  timeframe    String
+  status       String          @default("ACTIVE")
+  watermarkId  String?
   createdAt    DateTime        @default(now())
   expiresAt    DateTime?
 
@@ -207,9 +230,14 @@ model WatchlistItem {
 
 // ─── Affiliate System ────────────────────────────────────────
 model AffiliateCode {
-  id     String @id @default(uuid())
-  userId String @unique
-  code   String @unique
+  id              String    @id @default(uuid())
+  userId          String    @unique
+  code            String    @unique
+  qualified       Boolean   @default(false)
+  qualifiedAt     DateTime?
+  codeOfConduct   Boolean   @default(false)
+  firstCommission Float     @default(50)
+  lifetimeRate    Float     @default(10)
 
   user        User              @relation(fields: [userId], references: [id])
   referrals   AffiliateReferral[]
@@ -233,40 +261,67 @@ model AffiliateReferral {
 
 // ─── Broker Directory ────────────────────────────────────────
 model Broker {
-  id          String @id @default(uuid())
-  name        String
-  logo        String?
-  website     String
-  apiSupport  Boolean @default(false)
-  assetTypes  String[] // ["forex", "crypto", "stocks"]
-  description String?
-  rating      Float?   @default(0)
-  createdAt   DateTime @default(now())
+  id             String   @id @default(uuid())
+  name           String
+  logo           String?
+  website        String
+  apiSupport     Boolean  @default(false)
+  assetTypes     String[]
+  description    String?
+  rating         Float?   @default(0)
+  integrityScore Float    @default(100)
+  status         String   @default("ACTIVE")
+  createdAt      DateTime @default(now())
 
-  connections BrokerConnection[]
+  connections   BrokerConnection[]
+  integrityLogs BrokerIntegrityLog[]
 }
 
 model BrokerConnection {
   id        String   @id @default(uuid())
   userId    String
   brokerId  String
-  apiKey    String   // encrypted
-  apiSecret String   // encrypted
-  status    String   @default("PENDING") // PENDING, CONNECTED, FAILED
+  apiKey    String
+  apiSecret String
+  status    String   @default("PENDING")
   createdAt DateTime @default(now())
 
   user   User   @relation(fields: [userId], references: [id])
   broker Broker @relation(fields: [brokerId], references: [id])
 }
 
+// ─── Broker Integrity Monitoring ─────────────────────────────
+model BrokerIntegrityLog {
+  id         String   @id @default(uuid())
+  brokerId   String
+  metric     String
+  value      Float
+  severity   String   @default("LOW")
+  action     String?
+  detectedAt DateTime @default(now())
+
+  broker Broker @relation(fields: [brokerId], references: [id])
+}
+
 // ─── Community Pulse ─────────────────────────────────────────
 model CommunityEvent {
   id        String   @id @default(uuid())
-  type      String   // "JOIN", "TRADE", "SIGNAL", "MILESTONE"
+  type      String
   message   String
-  location  String?  // lat,lng for globe
-  isGhost   Boolean  @default(false) // admin-seeded
+  location  String?
+  isGhost   Boolean  @default(false)
   createdAt DateTime @default(now())
+}
+
+// ─── General Chat ────────────────────────────────────────────
+model ChatMessage {
+  id        String   @id @default(uuid())
+  userId    String
+  content   String
+  flagged   Boolean  @default(false)
+  createdAt DateTime @default(now())
+
+  user User @relation(fields: [userId], references: [id])
 }
 
 // ─── Payments ────────────────────────────────────────────────
@@ -275,11 +330,38 @@ model Payment {
   userId      String
   amount      Float
   currency    String
-  provider    String   // "coinbase" | "flutterwave"
+  provider    String
   externalId  String?
-  status      String   @default("PENDING") // PENDING, COMPLETED, FAILED
+  status      String   @default("PENDING")
   metadata    Json?
   createdAt   DateTime @default(now())
+}
+
+// ─── Donation Fund ───────────────────────────────────────────
+model DonationFund {
+  id               String   @id @default(uuid())
+  date             String   @unique
+  platformEarnings Float    @default(0)
+  donationAmount   Float    @default(0)
+  recipientCause   String?
+  txSignature      String?
+  status           String   @default("PENDING")
+  createdAt        DateTime @default(now())
+}
+
+// ─── Treasury (70/30 Financial Rules) ────────────────────────
+model TreasuryRecord {
+  id            String   @id @default(uuid())
+  date          String   @unique
+  dailyIncome   Float    @default(0)
+  tradingPool   Float    @default(0)
+  opsRetained   Float    @default(0)
+  donationAlloc Float    @default(0)
+  tradingProfit Float    @default(0)
+  poolBalance   Float    @default(0)
+  drawdownPct   Float    @default(0)
+  sharpeRatio   Float?
+  createdAt     DateTime @default(now())
 }
 
 // ─── Global Instruments Subscription (FCS API) ───────────────
@@ -398,9 +480,10 @@ model Partnership {
 model DirectorSalary {
   id              String   @id @default(uuid())
   month           String   @unique
-  grossSalary     Float    @default(10000)
-  personalDraw    Float    @default(2500)
-  reinvested      Float    @default(7500)
+  grossRevenue    Float    @default(0)
+  salaryAmount    Float    @default(0)
+  personalDraw    Float    @default(0)
+  reinvested      Float    @default(0)
   platformRevenue Float    @default(0)
   status          String   @default("PENDING")
   paidAt          DateTime?
@@ -421,4 +504,202 @@ model AffiliateSettlement {
 
   user          User          @relation(fields: [userId], references: [id])
   affiliateCode AffiliateCode @relation(fields: [affiliateCodeId], references: [id])
+}
+
+// ─── LatruxTrade Academy ─────────────────────────────────────
+model AcademyCourse {
+  id           String   @id @default(uuid())
+  slug         String   @unique
+  title        String
+  description  String
+  price        Float
+  duration     String
+  isMainCourse Boolean  @default(false)
+  modules      Int      @default(1)
+  passScore    Float    @default(80)
+  nftCertId    String?
+  createdAt    DateTime @default(now())
+
+  enrollments AcademyEnrollment[]
+  lessons     AcademyLesson[]
+}
+
+model AcademyLesson {
+  id        String   @id @default(uuid())
+  courseId   String
+  week      Int      @default(1)
+  title     String
+  content   String
+  videoUrl  String?
+  quizData  Json?
+  sortOrder Int      @default(0)
+  createdAt DateTime @default(now())
+
+  course AcademyCourse @relation(fields: [courseId], references: [id])
+}
+
+model AcademyEnrollment {
+  id          String   @id @default(uuid())
+  userId      String
+  courseId     String
+  progress    Float    @default(0)
+  quizScore   Float?
+  graduated   Boolean  @default(false)
+  nftMinted   Boolean  @default(false)
+  walletGrant Float    @default(0)
+  enrolledAt  DateTime @default(now())
+  graduatedAt DateTime?
+
+  user   User          @relation(fields: [userId], references: [id])
+  course AcademyCourse @relation(fields: [courseId], references: [id])
+
+  @@unique([userId, courseId])
+}
+
+// ─── Professional Courses ────────────────────────────────────
+model ProfessionalCourse {
+  id          String   @id @default(uuid())
+  slug        String   @unique
+  title       String
+  description String
+  price       Float    @default(29)
+  bundlePrice Float    @default(149)
+  modules     Int      @default(8)
+  passScore   Float    @default(80)
+  createdAt   DateTime @default(now())
+
+  enrollments CourseEnrollment[]
+}
+
+model CourseEnrollment {
+  id          String   @id @default(uuid())
+  userId      String
+  courseId     String
+  progress    Float    @default(0)
+  quizScore   Float?
+  completed   Boolean  @default(false)
+  nftMinted   Boolean  @default(false)
+  enrolledAt  DateTime @default(now())
+  completedAt DateTime?
+
+  user   User               @relation(fields: [userId], references: [id])
+  course ProfessionalCourse @relation(fields: [courseId], references: [id])
+
+  @@unique([userId, courseId])
+}
+
+// ─── Static AI Builder ───────────────────────────────────────
+enum AiBuilderTier {
+  BUILDER_STARTER
+  BUILDER_PRO
+  BUILDER_ENTERPRISE
+}
+
+model AiBuilderStrategy {
+  id               String        @id @default(uuid())
+  userId           String
+  name             String
+  tier             AiBuilderTier @default(BUILDER_STARTER)
+  filters          Json
+  backtestResult   Json?
+  paperTradeResult Json?
+  gpuCredits       Int           @default(0)
+  published        Boolean       @default(false)
+  validated        Boolean       @default(false)
+  createdAt        DateTime      @default(now())
+  updatedAt        DateTime      @updatedAt
+
+  user User @relation(fields: [userId], references: [id])
+}
+
+// ─── Ghost Tracker & Anti-Scam ───────────────────────────────
+model GhostTrackerAlert {
+  id          String   @id @default(uuid())
+  type        String
+  severity    String   @default("MEDIUM")
+  source      String
+  details     String
+  threatScore Float    @default(0)
+  resolved    Boolean  @default(false)
+  detectedAt  DateTime @default(now())
+}
+
+model SuspiciousReport {
+  id          String   @id @default(uuid())
+  userId      String
+  type        String
+  description String
+  status      String   @default("PENDING")
+  createdAt   DateTime @default(now())
+
+  user User @relation(fields: [userId], references: [id])
+}
+
+model LoginAlert {
+  id         String   @id @default(uuid())
+  userId     String
+  ipAddress  String
+  userAgent  String?
+  location   String?
+  suspicious Boolean  @default(false)
+  createdAt  DateTime @default(now())
+
+  user User @relation(fields: [userId], references: [id])
+}
+
+// ─── Living Autonomous Core State ────────────────────────────
+model AiCoreState {
+  id                 String   @id @default(uuid())
+  confluenceScore    Float    @default(0)
+  regimeId           Int      @default(0)
+  regimeConfidence   Float    @default(0)
+  aggressionLevel    Int      @default(1)
+  activeFilters      Int      @default(54)
+  brokerIntegrityAvg Float    @default(100)
+  apexReConfidence   Float    @default(0)
+  failureCorrections Int      @default(0)
+  entropyCollapseIdx Float    @default(0)
+  partnerGatePassing Boolean  @default(true)
+  lockdownMode       Boolean  @default(false)
+  consecutiveLosses  Int      @default(0)
+  consecutiveWins    Int      @default(0)
+  selfEvolutionCycle Int      @default(0)
+  rollingSharpRatio  Float?
+  maxDrawdownPct     Float    @default(0)
+  updatedAt          DateTime @updatedAt
+}
+
+// ─── Failure Theory Engine ───────────────────────────────────
+model FailureLog {
+  id             String   @id @default(uuid())
+  source         String
+  failureType    String
+  correctionMode String
+  lessonLearned  String?
+  stage          String   @default("CAPTURE")
+  resolved       Boolean  @default(false)
+  timeToCorrect  Float?
+  createdAt      DateTime @default(now())
+}
+
+// ─── Apex Reverse Engineering Vectors ────────────────────────
+model ApexReVector {
+  id          String   @id @default(uuid())
+  vectorName  String
+  vectorIndex Int
+  confidence  Float    @default(0)
+  lastScan    DateTime @default(now())
+  findings    Json?
+  status      String   @default("ACTIVE")
+  createdAt   DateTime @default(now())
+}
+
+// ─── Kill Switches (Admin Godview) ───────────────────────────
+model KillSwitch {
+  id        String   @id @default(uuid())
+  name      String   @unique
+  enabled   Boolean  @default(true)
+  reason    String?
+  toggledBy String?
+  toggledAt DateTime @default(now())
 }
